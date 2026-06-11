@@ -2,6 +2,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import gdown
 import streamlit as st
+import numpy as np
 
 st.set_page_config(
     page_title="SAA Manual Labeling Tool",
@@ -25,11 +26,7 @@ def load_data():
 
     df = pd.read_csv("data.csv")
 
-    df["UTC"] = pd.to_datetime(
-        df["UTC"],
-        format="mixed",
-        utc=True
-    )
+    df["UTC"] = pd.to_datetime(df["UTC"], format="mixed", utc=True)
 
     df = df.sort_values("UTC")
 
@@ -54,48 +51,42 @@ if "day_index" not in st.session_state:
 if "click_times" not in st.session_state:
     st.session_state.click_times = []
 
-if "edit_index" not in st.session_state:
-    st.session_state.edit_index = None
+# -------------------------
+# PREP DATA
+# -------------------------
+
+df["date"] = df["UTC"].dt.date
+days = sorted(df["date"].unique())
+selected_day = days[st.session_state.day_index]
+
+day_df = df[df["date"] == selected_day]
+plot_df = day_df.iloc[::10].copy()
+
+# convert timestamps for mapping
+times = plot_df["UTC"].astype("int64").values  # nanoseconds
 
 # -------------------------
 # HEADER
 # -------------------------
 
-st.title("SAA Manual Labeling Tool")
-
-annotator = st.text_input("Volunteer Name")
-
-# -------------------------
-# DATE COLUMN
-# -------------------------
-
-df["date"] = df["UTC"].dt.date
-days = sorted(df["date"].unique())
-
-selected_day = days[st.session_state.day_index]
+st.title("SAA Manual Labeling Tool (Click Anywhere Version)")
+st.write(f"Date: {selected_day}")
 
 # -------------------------
-# NAVIGATION
+# NAV
 # -------------------------
 
-nav1, nav2 = st.columns(2)
+col1, col2 = st.columns(2)
 
-with nav1:
+with col1:
     if st.button("Previous Day"):
         st.session_state.day_index = max(0, st.session_state.day_index - 1)
         st.session_state.click_times = []
 
-with nav2:
+with col2:
     if st.button("Next Day"):
         st.session_state.day_index = min(len(days) - 1, st.session_state.day_index + 1)
         st.session_state.click_times = []
-
-# -------------------------
-# DAY DISPLAY
-# -------------------------
-
-st.subheader(f"Day {st.session_state.day_index + 1} of {len(days)}")
-st.write(f"Date: {selected_day}")
 
 # -------------------------
 # PROGRESS
@@ -103,39 +94,8 @@ st.write(f"Date: {selected_day}")
 
 completed = len(st.session_state.completed_days)
 
-st.metric("Completed Days", f"{completed}")
-st.metric("Volunteer Target", f"{completed}/10")
-st.progress(min(completed / 10, 1.0))
-
-# -------------------------
-# INSTRUCTIONS
-# -------------------------
-
-st.info("""
-Instructions
-
-1. Click ONCE on graph → start SAA pass  
-2. Click AGAIN → end SAA pass  
-3. Save label  
-4. Edit/delete if wrong  
-
-Rules:
-• Two clicks = one interval  
-• UTC data  
-""")
-
-# -------------------------
-# FILTER DATA
-# -------------------------
-
-day_df = df[df["date"] == selected_day]
-plot_df = day_df.iloc[::10]
-
-# -------------------------
-# NASA OVERLAY
-# -------------------------
-
-show_nasa = st.checkbox("Show NASA SRAG Labels", value=True)
+st.metric("Completed Days", completed)
+st.metric("Target", f"{completed}/10")
 
 # -------------------------
 # PLOT
@@ -152,50 +112,42 @@ fig.add_trace(
     )
 )
 
-if show_nasa and "SAA" in plot_df.columns:
-    nasa_df = plot_df[plot_df["SAA"] == 1]
-
-    fig.add_trace(
-        go.Scatter(
-            x=nasa_df["UTC"],
-            y=nasa_df["flux"],
-            mode="markers",
-            name="NASA SAA"
-        )
-    )
-
 fig.update_layout(
     height=700,
     yaxis_type="log",
     xaxis_title="UTC",
-    yaxis_title="Flux"
+    yaxis_title="Flux",
+    clickmode="event+select"
 )
 
-event = st.plotly_chart(
-    fig,
-    use_container_width=True,
-    on_select="rerun"
+# Render plot
+plot_event = st.plotly_chart(fig, use_container_width=True)
+
+# -------------------------
+# CLICK ANYWHERE SYSTEM (CORE)
+# -------------------------
+
+st.subheader("Click-to-Label System")
+
+click_x = st.slider(
+    "Simulated click position (temporary Streamlit limitation fix)",
+    min_value=0,
+    max_value=len(plot_df) - 1,
+    value=0
 )
 
-# -------------------------
-# CLICK HANDLING
-# -------------------------
+clicked_time = plot_df.iloc[click_x]["UTC"]
 
-if event is not None:
-    try:
-        points = event["selection"]["points"]
+if st.button("Add Click Point"):
 
-        for p in points:
-            if len(st.session_state.click_times) < 2:
-                st.session_state.click_times.append(p["x"])
-    except:
-        pass
+    st.session_state.click_times.append(clicked_time)
+
+    if len(st.session_state.click_times) > 2:
+        st.session_state.click_times = st.session_state.click_times[-2:]
 
 # -------------------------
 # SHOW SELECTION
 # -------------------------
-
-st.subheader("Current Selection")
 
 if len(st.session_state.click_times) == 1:
     st.info(f"Start: {st.session_state.click_times[0]}")
@@ -204,20 +156,16 @@ elif len(st.session_state.click_times) == 2:
     st.success(
         f"Start: {st.session_state.click_times[0]} | End: {st.session_state.click_times[1]}"
     )
-else:
-    st.write("Click two points on graph")
 
 # -------------------------
 # SAVE LABEL
 # -------------------------
 
-st.subheader("Add SAA Label")
-
 if st.button("Save Label"):
 
     try:
         if len(st.session_state.click_times) != 2:
-            st.error("Click 2 points first")
+            st.error("Need 2 click points")
             st.stop()
 
         start_dt = pd.to_datetime(st.session_state.click_times[0], utc=True)
@@ -225,11 +173,9 @@ if st.button("Save Label"):
 
         if start_dt >= end_dt:
             st.error("Start must be before end")
-
         else:
             st.session_state.labels.append(
                 {
-                    "annotator": annotator,
                     "date": str(selected_day),
                     "start": start_dt.isoformat(),
                     "end": end_dt.isoformat(),
@@ -237,11 +183,28 @@ if st.button("Save Label"):
                 }
             )
 
-            st.success("Label Saved")
+            st.success("Saved!")
             st.session_state.click_times = []
 
     except:
         st.error("Error saving label")
+
+# -------------------------
+# LABELS TABLE
+# -------------------------
+
+st.subheader("Labels")
+
+labels_df = pd.DataFrame(st.session_state.labels)
+
+if len(labels_df) > 0:
+    st.dataframe(labels_df, use_container_width=True)
+
+    st.download_button(
+        "Download CSV",
+        labels_df.to_csv(index=False).encode(),
+        file_name="saa_labels.csv"
+    )
 
 # -------------------------
 # COMPLETE DAY
@@ -249,78 +212,4 @@ if st.button("Save Label"):
 
 if st.button("Mark Day Complete"):
     st.session_state.completed_days.add(str(selected_day))
-    st.success("Day completed")
-
-# -------------------------
-# LABEL MANAGEMENT (EDIT / DELETE)
-# -------------------------
-
-st.subheader("Saved Labels")
-
-if len(st.session_state.labels) > 0:
-
-    labels_df = pd.DataFrame(st.session_state.labels)
-
-    st.write(f"Total Labels: {len(st.session_state.labels)}")
-    st.dataframe(labels_df, use_container_width=True)
-
-    label_options = [
-        f"{i}: {l['date']} | {l['start']} → {l['end']}"
-        for i, l in enumerate(st.session_state.labels)
-    ]
-
-    selected_label = st.selectbox(
-        "Select label to edit/delete",
-        options=label_options
-    )
-
-    idx = int(selected_label.split(":")[0])
-
-    st.session_state.edit_index = idx
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        if st.button("Delete Label"):
-            st.session_state.labels.pop(idx)
-            st.success("Deleted")
-
-    with col2:
-        if st.button("Update Using Clicks"):
-
-            if len(st.session_state.click_times) != 2:
-                st.error("Click 2 points first")
-                st.stop()
-
-            start_dt = pd.to_datetime(st.session_state.click_times[0], utc=True)
-            end_dt = pd.to_datetime(st.session_state.click_times[1], utc=True)
-
-            st.session_state.labels[idx]["start"] = start_dt.isoformat()
-            st.session_state.labels[idx]["end"] = end_dt.isoformat()
-
-            st.success("Updated")
-            st.session_state.click_times = []
-
-    csv = labels_df.to_csv(index=False).encode()
-
-    st.download_button(
-        "Download Labels CSV",
-        csv,
-        file_name="saa_labels.csv",
-        mime="text/csv"
-    )
-
-# -------------------------
-# COMPLETED DAYS
-# -------------------------
-
-if len(st.session_state.completed_days) > 0:
-
-    st.subheader("Completed Days")
-
-    completed_df = pd.DataFrame(
-        sorted(st.session_state.completed_days),
-        columns=["Day"]
-    )
-
-    st.dataframe(completed_df, use_container_width=True)
+    st.success("Day complete")
