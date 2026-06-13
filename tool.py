@@ -54,6 +54,12 @@ if "day_index" not in st.session_state:
 if "click_times" not in st.session_state:
     st.session_state.click_times = []
 
+if "manual_start" not in st.session_state:
+    st.session_state.manual_start = ""
+
+if "manual_end" not in st.session_state:
+    st.session_state.manual_end = ""
+
 # -------------------------
 # HEADER
 # -------------------------
@@ -220,9 +226,70 @@ elif len(st.session_state.click_times) == 2:
 else:
     st.write("Click two points on graph")
 
+if st.button("Clear Selection"):
+    st.session_state.click_times = []
+    st.rerun()
+
 # -------------------------
 # SAVE LABEL
 # -------------------------
+
+st.subheader("Manual Label Entry (Optional)")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    manual_start = st.text_input(
+        "Start Time (UTC)",
+        key="manual_start",
+        placeholder="17:02:00"
+    )
+
+with col2:
+    manual_end = st.text_input(
+        "End Time (UTC)",
+        key="manual_end",
+        placeholder="17:14:00"
+    )
+
+if st.button("Save Manual Label"):
+
+    try:
+
+        start_dt = pd.to_datetime(
+            f"{selected_day} {manual_start}",
+            utc=True
+        )
+
+        end_dt = pd.to_datetime(
+            f"{selected_day} {manual_end}",
+            utc=True
+        )
+
+        if start_dt >= end_dt:
+            st.error("Start must be before end")
+
+        else:
+
+            st.session_state.labels.append(
+                {
+                    "annotator": annotator,
+                    "date": str(selected_day),
+                    "start": start_dt.isoformat(),
+                    "end": end_dt.isoformat(),
+                    "label": "SAA"
+                }
+            )
+
+            st.session_state.click_times = []
+            st.session_state.manual_start = ""
+            st.session_state.manual_end = ""
+
+            st.success("Manual Label Saved")
+            st.rerun()
+
+    except:
+        st.error("Use HH:MM:SS format")
 
 st.subheader("Add SAA Label")
 
@@ -250,8 +317,11 @@ if st.button("Save Label"):
                 }
             )
 
-            st.success("Label Saved")
             st.session_state.click_times = []
+
+            st.success("Label Saved")
+
+            st.rerun()
 
     except:
         st.error("Error saving label")
@@ -275,9 +345,32 @@ labels_df = pd.DataFrame(st.session_state.labels)
 if len(labels_df) > 0:
 
     st.write(f"Total Labels: {len(st.session_state.labels)}")
-    st.dataframe(labels_df, use_container_width=True)
 
-    csv = labels_df.to_csv(index=False).encode()
+    st.dataframe(
+        labels_df,
+        use_container_width=True
+    )
+
+    delete_idx = st.selectbox(
+        "Select Label To Delete",
+        options=range(len(st.session_state.labels)),
+        format_func=lambda x:
+        f"{x}: {st.session_state.labels[x]['start']} → {st.session_state.labels[x]['end']}"
+    )
+
+    if st.button("Delete Selected Label"):
+
+        st.session_state.labels.pop(delete_idx)
+
+        st.session_state.click_times = []
+
+        st.success("Label Deleted")
+
+        st.rerun()
+
+    csv = labels_df.to_csv(
+        index=False
+    ).encode()
 
     st.download_button(
         "Download Labels CSV",
