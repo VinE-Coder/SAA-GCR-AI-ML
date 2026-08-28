@@ -1,1 +1,1 @@
-ref/ deliberately NOT copied — blind annotation, and GitHub Pages is fully public.
+The NASA/SRAG reference (web/public/ref/) is deliberately not published here. Annotation is blind, and GitHub Pages is fully public.
