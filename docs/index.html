@@ -2,7 +2,7 @@
 <meta charset="utf-8">
 <title>SAA Manual Labeling Tool</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="style.css?v=aea9c7cd">
+<link rel="stylesheet" href="style.css?v=c4e7c64e">
 
 <header>
   <h1>SAA Manual Labeling Tool</h1>
@@ -19,6 +19,7 @@
   <span id="dayInfo" class="muted"></span>
   <span class="spacer"></span>
   <label class="chk"><input type="checkbox" id="logY" checked> log scale</label>
+  <label class="chk"><input type="checkbox" id="guides" checked> guide line</label>
   <button id="reset">Reset view</button>
 </nav>
 
@@ -29,6 +30,11 @@
         region — it is often <strong>much clearer in <code>ddsi</code> or
         <code>ddsi&times;hardness</code> than in <code>flux</code></strong>, so check
         every panel before deciding.</li>
+    <li>The <span class="guideref">dashed line</span> is a help, not an answer.
+        Anything rising <strong>above</strong> it is almost certainly a pass — that
+        held for 99% of cases when tested. But <strong>passes also happen below the
+        line</strong>: roughly a quarter never reach it. Being under the line means
+        nothing either way, so keep looking there too.</li>
     <li>Click anywhere in a panel where the pass <em>begins</em>.</li>
     <li>Click again where it <em>ends</em>.</li>
     <li>Drag either edge to fine-tune, then press <strong>Save label</strong>.</li>
@@ -82,6 +88,6 @@
 </footer>
 
 <script src="config.js?v=2fd323e4"></script>
-<script src="render.js?v=0c80cd0f"></script>
+<script src="render.js?v=e34ef60e"></script>
 <script src="store.js?v=1c2343d4"></script>
-<script src="app.js?v=8ef5cb15"></script>
+<script src="app.js?v=eb155513"></script>

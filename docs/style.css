@@ -62,3 +62,5 @@ tr.editing td{background:#1e2430}
 footer{position:fixed;bottom:0;left:0;right:0;padding:8px 20px;background:var(--bg);
   border-top:1px solid var(--line);font-size:12px;line-height:1.4}
 footer .warn{color:#ffcf7a}
+
+.guideref{color:#9a8cff;font-weight:600}

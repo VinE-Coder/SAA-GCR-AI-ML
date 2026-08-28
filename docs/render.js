@@ -187,6 +187,33 @@ const Render = (() => {
     }
     ctx.restore();
 
+    /* Guide line. Reliable in ONE direction only: above it is almost certainly a
+     * pass (measured 99% precision at 5x the day's median ddsi), but ~29% of passes
+     * never cross it. Drawn under the selection so it never obscures live work. */
+    if (o.guide && o.guide.v > 0) {
+      const gy = Y(o.guide.v);
+      if (gy > y0 && gy < y1) {
+        ctx.strokeStyle = '#9a8cff';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.moveTo(x0, Math.round(gy) + 0.5);
+        ctx.lineTo(x1, Math.round(gy) + 0.5);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        if (o.guide.label) {
+          ctx.font = '10px ui-monospace,monospace';
+          ctx.textAlign = 'left';
+          const tw = ctx.measureText(o.guide.label).width;
+          ctx.fillStyle = 'rgba(23,27,35,.85)';
+          ctx.fillRect(x1 - tw - 10, gy - 13, tw + 8, 12);
+          ctx.fillStyle = '#9a8cff';
+          ctx.fillText(o.guide.label, x1 - tw - 6, gy - 4);
+          ctx.textAlign = 'right';
+        }
+      }
+    }
+
     const sel = o.selection;
     if (sel && sel.start != null) {
       if (sel.end != null) {

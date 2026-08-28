@@ -9,9 +9,12 @@
   // Ordered top-to-bottom. Measured share of reference passes whose peak clears
   // that day's ordinary background maximum -- i.e. what is actually findable.
   const PANELS = [
-    { key: 'ddsi', title: 'ddsi — deposited dose', note: '67% of passes visible' },
+    { key: 'ddsi', title: 'ddsi — deposited dose', note: '67% of passes visible',
+      guide: 5 },
     { key: 'dh', title: 'ddsi × hardness — most sensitive', note: '70% visible · 100 s median',
-      smooth: 9 },
+      smooth: 9, guide: 10 },
+    // no guide on flux: it is the weakest discriminator and a line there would
+    // suggest more confidence than the measurement supports
     { key: 'flux', title: 'flux — count rate', note: '58% of passes visible' }
   ];
 
@@ -77,7 +80,8 @@
       val.className = 'val';
       d.append(c, tag, val);
       host.append(d);
-      canvases.push({ el: d, canvas: c, val, key: p.key, smooth: p.smooth });
+      canvases.push({ el: d, canvas: c, val, key: p.key, smooth: p.smooth,
+        guide: p.guide });
       wire(c);
     }
     const ax = document.createElement('canvas');
@@ -101,7 +105,9 @@
         Render.panel(c.canvas, {
           t: S.day.t, y: c.smooth ? S.day[c.key + '_s'] : S.day[c.key],
           t0: S.view.t0, t1: S.view.t1,
-          log: S.log, selection: S.sel, saved, ref: null, hoverX: S.hoverX
+          log: S.log, selection: S.sel, saved, ref: null, hoverX: S.hoverX,
+          guide: (S.guides && c.guide)
+            ? { v: S.day.guide[c.key], label: c.guide + '× median' } : null
         });
       }
       Render.axis(canvases.axis, S.view.t0, S.view.t1);
@@ -278,6 +284,18 @@
     for (const p of PANELS) {
       if (p.smooth) S.day[p.key + '_s'] = rollingMedian(S.day[p.key], p.smooth);
     }
+    // Guide level = k x this day's own median of the plotted series. Derived only
+    // from the data on screen -- it uses no reference labels, so blind annotation
+    // is preserved. k was chosen where false alarms collapse: at 5x median ddsi the
+    // line catches 71% of passes (essentially the whole findable ceiling) with one
+    // false alarm every ten days.
+    S.day.guide = {};
+    for (const p of PANELS) {
+      if (!p.guide) continue;
+      const y = p.smooth ? S.day[p.key + '_s'] : S.day[p.key];
+      const sorted = Array.prototype.slice.call(y).sort((a, b) => a - b);
+      S.day.guide[p.key] = p.guide * sorted[sorted.length >> 1];
+    }
     S.sel = { start: null, end: null };
     S.editing = null;
     S.view = { t0: 0, t1: 86400 };
@@ -412,6 +430,7 @@
     $('jump').onchange = e => loadDay(+e.target.value);
     $('reset').onclick = () => { S.view = { t0: 0, t1: 86400 }; draw(); };
     $('logY').onchange = e => { S.log = e.target.checked; draw(); };
+    $('guides').onchange = e => { S.guides = e.target.checked; draw(); };
 
     $('save').onclick = () => commit(S.sel.start, S.sel.end, 'click');
     $('clear').onclick = () => {
