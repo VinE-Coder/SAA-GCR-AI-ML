@@ -10,9 +10,29 @@
   // that day's ordinary background maximum -- i.e. what is actually findable.
   const PANELS = [
     { key: 'ddsi', title: 'ddsi — deposited dose', note: '67% of passes visible' },
-    { key: 'dh', title: 'ddsi × hardness — most sensitive', note: '70% of passes visible' },
+    { key: 'dh', title: 'ddsi × hardness — most sensitive', note: '70% visible · 100 s median',
+      smooth: 9 },
     { key: 'flux', title: 'flux — count rate', note: '58% of passes visible' }
   ];
+
+  /* Rolling median, odd window. The hardness ratio is very noisy sample to sample,
+   * so its per-pixel min/max envelope fills in solid and hides the shape of a pass.
+   * An SAA pass lasts ~14 minutes and samples are 11 s apart, so a 9-sample (~100 s)
+   * median removes jitter without touching the feature being looked for -- the panel
+   * becomes both more readable and more sensitive. A median, not a mean, so a single
+   * hot sample cannot drag the baseline up. */
+  function rollingMedian(y, w) {
+    const half = (w - 1) >> 1, n = y.length, out = new Float64Array(n);
+    const buf = new Float64Array(w);
+    for (let i = 0; i < n; i++) {
+      const a = Math.max(0, i - half), b = Math.min(n - 1, i + half);
+      let m = 0;
+      for (let k = a; k <= b; k++) buf[m++] = y[k];
+      const s = Array.prototype.slice.call(buf, 0, m).sort((p, q) => p - q);
+      out[i] = s[m >> 1];
+    }
+    return out;
+  }
 
   const S = {
     index: null, dayIdx: 0, date: null, day: null,
@@ -57,7 +77,7 @@
       val.className = 'val';
       d.append(c, tag, val);
       host.append(d);
-      canvases.push({ el: d, canvas: c, val, key: p.key });
+      canvases.push({ el: d, canvas: c, val, key: p.key, smooth: p.smooth });
       wire(c);
     }
     const ax = document.createElement('canvas');
@@ -79,7 +99,7 @@
         .filter(l => l.e > S.view.t0 - 60 && l.s < S.view.t1 + 60);
       for (const c of canvases) {
         Render.panel(c.canvas, {
-          t: S.day.t, y: S.day[c.key],
+          t: S.day.t, y: c.smooth ? S.day[c.key + '_s'] : S.day[c.key],
           t0: S.view.t0, t1: S.view.t1,
           log: S.log, selection: S.sel, saved, ref: null, hoverX: S.hoverX
         });
@@ -101,7 +121,8 @@
     let i = Render.lower(t, sec);
     if (i >= t.length) i = t.length - 1;
     for (const c of canvases) {
-      const v = S.day[c.key][i];
+      // report the value that is actually drawn, so hover matches the curve
+      const v = (c.smooth ? S.day[c.key + '_s'] : S.day[c.key])[i];
       c.val.textContent = hms(t[i]) + '   ' + (v >= 100 ? v.toFixed(0) : v.toPrecision(3));
     }
   }
@@ -254,6 +275,9 @@
     S.dayIdx = clamp(i, 0, S.index.length - 1);
     S.date = S.index[S.dayIdx].date;
     S.day = await (await fetch('data/' + S.date + '.json')).json();
+    for (const p of PANELS) {
+      if (p.smooth) S.day[p.key + '_s'] = rollingMedian(S.day[p.key], p.smooth);
+    }
     S.sel = { start: null, end: null };
     S.editing = null;
     S.view = { t0: 0, t1: 86400 };

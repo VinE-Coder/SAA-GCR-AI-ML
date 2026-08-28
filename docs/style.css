@@ -38,10 +38,14 @@ main{margin:6px 0 18px}
 .panel{position:relative;border:1px solid var(--line);border-radius:8px;background:var(--panel);
   margin-bottom:6px;overflow:hidden}
 .panel canvas{display:block;width:100%;cursor:crosshair}
-.panel .tag{position:absolute;top:7px;left:11px;font:12px ui-monospace,monospace;
-  color:var(--dim);pointer-events:none}
-.panel .val{position:absolute;top:7px;right:11px;font:12px ui-monospace,monospace;
-  color:var(--accent);pointer-events:none}
+/* left offset must clear the y-axis label gutter (Render.PAD.l = 58px) or the tick
+   labels collide with the title, e.g. "ddsi500 hardness" */
+.panel .tag{position:absolute;top:6px;left:66px;font:12px ui-monospace,monospace;
+  color:var(--dim);pointer-events:none;background:rgba(23,27,35,.82);
+  padding:1px 6px;border-radius:4px}
+.panel .val{position:absolute;top:6px;right:14px;font:12px ui-monospace,monospace;
+  color:var(--accent);pointer-events:none;background:rgba(23,27,35,.82);
+  padding:1px 6px;border-radius:4px}
 .panel.grabbing canvas{cursor:grabbing}
 #axis{height:22px;position:relative}
 #axis canvas{display:block;width:100%}

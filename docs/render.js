@@ -104,7 +104,8 @@ const Render = (() => {
   function fmtY(v) {
     const a = Math.abs(v);
     if (a === 0) return '0';
-    if (a >= 1000) return v.toExponential(0);
+    // "1k" reads better than "1e+3" in a 58px gutter
+    if (a >= 1000) return (Math.round(v / 100) / 10) + 'k';
     if (a >= 1) return String(Math.round(v * 100) / 100);
     return String(Number(v.toPrecision(2)));
   }
