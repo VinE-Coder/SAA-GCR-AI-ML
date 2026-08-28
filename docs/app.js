@@ -39,14 +39,8 @@
     view: { t0: 0, t1: 86400 },
     sel: { start: null, end: null },
     labels: [], done: [], editing: null,
-    log: true, hoverX: null, volunteer: '',
-    // Windowed scanning. At full-day width a 14-minute pass is ~17px wide, and
-    // measurement showed 71% of passes are already the tallest thing on screen --
-    // so the difficulty is not visibility, it is hunting 11 small features across
-    // 24 hours. A 4-hour window gives each pass ~6x the pixels.
-    span: 14400, winStart: 0, winIdx: 0, seen: new Set()
+    log: true, hoverX: null, volunteer: ''
   };
-  const OVERLAP = 300;   // windows overlap 5 min so a pass on a seam is never cut
 
   const $ = id => document.getElementById(id);
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -112,51 +106,6 @@
       }
       Render.axis(canvases.axis, S.view.t0, S.view.t1);
     });
-  }
-
-  /* --------------------------------------------------------------- windowing */
-
-  const winStep = () => Math.max(1, S.span - OVERLAP);
-  const winCount = () => S.span >= 86400
-    ? 1 : Math.max(1, Math.ceil((86400 - OVERLAP) / winStep()));
-  // Index is held in state, not derived from winStart: the final window's start is
-  // clamped so the view ends exactly at midnight, and deriving the index from that
-  // clamped value made it stick one short of the end, so Next never disabled.
-  const winIndex = () => S.winIdx;
-
-  function setWindow(idx) {
-    const n = winCount();
-    const i = clamp(idx, 0, n - 1);
-    S.winIdx = i;
-    S.winStart = clamp(i * winStep(), 0, Math.max(0, 86400 - S.span));
-    S.view = { t0: S.winStart, t1: Math.min(86400, S.winStart + S.span) };
-    S.seen.add(S.date + '#' + i);
-    renderWindow();
-    draw();
-  }
-
-  function renderWindow() {
-    const n = winCount(), i = winIndex();
-    const whole = S.span >= 86400;
-    $('winPrev').disabled = whole || i === 0;
-    $('winNext').disabled = whole || i === n - 1;
-    $('winInfo').textContent = whole
-      ? 'whole day'
-      : hms(S.view.t0) + ' – ' + hms(Math.min(86399, S.view.t1)) +
-        '   ·   window ' + (i + 1) + ' of ' + n;
-    const dots = $('winDots');
-    dots.innerHTML = '';
-    if (!whole) {
-      for (let k = 0; k < n; k++) {
-        const d = document.createElement('i');
-        if (k === i) d.className = 'here';
-        else if (S.seen.has(S.date + '#' + k)) d.className = 'seen';
-        d.title = 'window ' + (k + 1);
-        d.onclick = () => setWindow(k);
-        d.style.cursor = 'pointer';
-        dots.append(d);
-      }
-    }
   }
 
   const nearest = sec => {
@@ -331,7 +280,7 @@
     }
     S.sel = { start: null, end: null };
     S.editing = null;
-    setWindow(0);
+    S.view = { t0: 0, t1: 86400 };
     $('jump').value = String(S.dayIdx);
     $('dayInfo').textContent = 'day ' + (S.dayIdx + 1) + ' of ' + S.index.length +
       '  ·  ' + S.day.n.toLocaleString() + ' samples at 11 s';
@@ -461,15 +410,8 @@
     $('prev').onclick = () => loadDay(S.dayIdx - 1);
     $('next').onclick = () => loadDay(S.dayIdx + 1);
     $('jump').onchange = e => loadDay(+e.target.value);
+    $('reset').onclick = () => { S.view = { t0: 0, t1: 86400 }; draw(); };
     $('logY').onchange = e => { S.log = e.target.checked; draw(); };
-
-    $('winPrev').onclick = () => setWindow(winIndex() - 1);
-    $('winNext').onclick = () => setWindow(winIndex() + 1);
-    $('span').onchange = e => {
-      const mid = (S.view.t0 + S.view.t1) / 2;      // keep roughly the same place
-      S.span = +e.target.value;
-      setWindow(S.span >= 86400 ? 0 : Math.round((mid - S.span / 2) / winStep()));
-    };
 
     $('save').onclick = () => commit(S.sel.start, S.sel.end, 'click');
     $('clear').onclick = () => {
@@ -523,14 +465,9 @@
 
     window.addEventListener('keydown', e => {
       if (e.key === 'Escape') { $('clear').click(); }
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
-      // arrows sweep windows (the frequent action); shift+arrows change day
-      if (e.key === 'ArrowLeft') {
-        e.shiftKey ? (!$('prev').disabled && loadDay(S.dayIdx - 1)) : setWindow(winIndex() - 1);
-      }
-      if (e.key === 'ArrowRight') {
-        e.shiftKey ? (!$('next').disabled && loadDay(S.dayIdx + 1)) : setWindow(winIndex() + 1);
-      }
+      if (e.target.tagName === 'INPUT') return;
+      if (e.key === 'ArrowLeft' && !$('prev').disabled) loadDay(S.dayIdx - 1);
+      if (e.key === 'ArrowRight' && !$('next').disabled) loadDay(S.dayIdx + 1);
     });
     window.addEventListener('resize', draw);
     window.addEventListener('beforeunload', e => {

@@ -12,12 +12,6 @@ header{display:flex;align-items:center;gap:24px;flex-wrap:wrap;padding:16px 0 12
   border-bottom:1px solid var(--line)}
 .who{display:flex;align-items:center;gap:10px}
 nav{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 0}
-#winbar{padding:0 0 10px;border-bottom:1px solid var(--line);margin-bottom:10px}
-#winbar button{padding:5px 12px}
-.dots{display:inline-flex;gap:4px;align-items:center}
-.dots i{width:9px;height:9px;border-radius:50%;background:var(--line);display:block}
-.dots i.seen{background:var(--dim)}
-.dots i.here{background:var(--accent);box-shadow:0 0 0 2px rgba(90,169,255,.25)}
 .spacer{flex:1}
 button{background:var(--accent);color:#08111d;border:0;border-radius:6px;padding:7px 13px;
   font:inherit;font-weight:600;cursor:pointer}

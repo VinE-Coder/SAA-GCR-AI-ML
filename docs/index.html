@@ -2,7 +2,7 @@
 <meta charset="utf-8">
 <title>SAA Manual Labeling Tool</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="style.css?v=e0a03887">
+<link rel="stylesheet" href="style.css?v=aea9c7cd">
 
 <header>
   <h1>SAA Manual Labeling Tool</h1>
@@ -19,41 +19,22 @@
   <span id="dayInfo" class="muted"></span>
   <span class="spacer"></span>
   <label class="chk"><input type="checkbox" id="logY" checked> log scale</label>
-</nav>
-
-<nav id="winbar">
-  <button id="winPrev" title="previous window (left arrow)">&#9664;</button>
-  <button id="winNext" title="next window (right arrow)">&#9654;</button>
-  <label>Show
-    <select id="span">
-      <option value="7200">2 hours</option>
-      <option value="14400" selected>4 hours</option>
-      <option value="28800">8 hours</option>
-      <option value="86400">whole day</option>
-    </select>
-  </label>
-  <span id="winInfo" class="muted"></span>
-  <span id="winDots" class="dots"></span>
-  <span class="spacer"></span>
-  <span class="muted">arrow keys move the window</span>
+  <button id="reset">Reset view</button>
 </nav>
 
 <details id="help" open>
   <summary>How to label</summary>
   <ol>
-    <li>The day is split into <strong>windows of a few hours</strong>. Work through
-        them with the <strong>arrow keys</strong> — the dots show which you have
-        seen. Do not try to scan a whole day at once; the passes are too small to
-        pick out reliably at that width.</li>
-    <li>In each window, check all three panels. A South Atlantic Anomaly pass shows
-        as a raised region — often <strong>much clearer in <code>ddsi</code> or
-        <code>ddsi&times;hardness</code> than in <code>flux</code></strong>.</li>
+    <li>Scan all three panels. A South Atlantic Anomaly pass shows as a raised
+        region — it is often <strong>much clearer in <code>ddsi</code> or
+        <code>ddsi&times;hardness</code> than in <code>flux</code></strong>, so check
+        every panel before deciding.</li>
     <li>Click anywhere in a panel where the pass <em>begins</em>.</li>
     <li>Click again where it <em>ends</em>.</li>
     <li>Drag either edge to fine-tune, then press <strong>Save label</strong>.</li>
     <li>Repeat for every pass you can see, then <strong>Mark day complete</strong>.</li>
   </ol>
-  <p class="muted">Arrow keys move the window, shift+arrows change day. Scroll to zoom, shift-drag to pan, <kbd>Esc</kbd> clears a selection.
+  <p class="muted">Scroll to zoom, shift-drag to pan, <kbd>Esc</kbd> clears a selection.
      All times are UTC. There are typically around 11 passes per day, but
      <strong>some are too weak to see — only label what you can actually identify.</strong>
      Missing an invisible pass is expected and is not an error.</p>
@@ -103,4 +84,4 @@
 <script src="config.js?v=2fd323e4"></script>
 <script src="render.js?v=0c80cd0f"></script>
 <script src="store.js?v=1c2343d4"></script>
-<script src="app.js?v=70ba2eb0"></script>
+<script src="app.js?v=8ef5cb15"></script>
