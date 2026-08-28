@@ -132,6 +132,11 @@
       down = { px, x: e.clientX, t: g().toTime(px) };
       mode = e.shiftKey ? 'pan' : (handleAt(px) || null);
       if (mode === 'pan') canvas.parentElement.classList.add('grabbing');
+      // preventDefault below stops text selection while dragging, but it also
+      // suppresses the blur that would commit a half-typed name -- so blur by hand
+      if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+        document.activeElement.blur();
+      }
       e.preventDefault();
     });
 
@@ -199,10 +204,16 @@
     draw();
   }
 
+  // Always read the name from the field rather than trusting a cached copy: a
+  // `change` event can never fire if the input never loses focus, and mousedown on
+  // the canvas calls preventDefault(), which suppresses the blur.
+  const who = () => ($('who').value || '').trim();
+
   function renderSel() {
     const { start, end } = S.sel;
     const ready = start != null && end != null && start !== end;
-    const named = S.volunteer.trim().length > 0;
+    S.volunteer = who();
+    const named = S.volunteer.length > 0;
     $('save').disabled = !(ready && named);
     $('clear').disabled = start == null;
     $('whoWarn').classList.toggle('hidden', named || !ready);
@@ -212,6 +223,9 @@
       $('selInfo').textContent = 'Click a panel to set the start of a pass.';
     } else if (end == null) {
       $('selInfo').innerHTML = 'Start <b>' + hms(start) + '</b> UTC — now click the end.';
+    } else if (start === end) {
+      $('selInfo').innerHTML = 'Start and end are the same sample — click further apart, ' +
+        'or zoom in first.';
     } else {
       const a = Math.min(start, end), b = Math.max(start, end);
       $('selInfo').innerHTML = 'Start <b>' + hms(a) + '</b> &rarr; end <b>' + hms(b) +
@@ -324,7 +338,8 @@
   }
 
   async function commit(startSec, endSec, source) {
-    const v = S.volunteer.trim();
+    const v = who();
+    S.volunteer = v;
     if (!v) { $('whoWarn').classList.remove('hidden'); return false; }
     const a = Math.min(startSec, endSec), b = Math.max(startSec, endSec);
     if (!(b > a)) { alert('Start time must be before end time.'); return false; }
@@ -352,8 +367,15 @@
   function init() {
     buildPanels();
 
+    // `input` fires on every keystroke, so the Save button enables as soon as a name
+    // is typed. `change` additionally reloads that volunteer's existing labels.
+    $('who').addEventListener('input', () => {
+      S.volunteer = who();
+      localStorage.setItem('saa.who', S.volunteer);
+      renderSel();
+    });
     $('who').addEventListener('change', () => {
-      S.volunteer = $('who').value;
+      S.volunteer = who();
       localStorage.setItem('saa.who', S.volunteer);
       refresh();
       renderSel();
