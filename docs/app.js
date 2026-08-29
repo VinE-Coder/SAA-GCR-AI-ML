@@ -46,6 +46,11 @@
   };
 
   const $ = id => document.getElementById(id);
+  // Read the checkbox at use time. Mirroring it into state is how the guide line
+  // silently never drew: the state field was never added, so the flag was undefined
+  // and the check failed on every fresh load.
+  const guidesOn = () => { const el = document.getElementById('guides');
+    return el ? el.checked : true; };
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
   const hms = s => {
@@ -96,6 +101,13 @@
     pending = true;
     requestAnimationFrame(() => {
       pending = false;
+      paint();
+    });
+  }
+
+  // Synchronous paint, separated from the rAF scheduling so it can be called and
+  // verified directly. draw() coalesces repaints; paint() does the work.
+  function paint() {
       if (!S.day) return;
       const saved = S.labels
         .filter(l => l.id !== S.editing)
@@ -106,12 +118,11 @@
           t: S.day.t, y: c.smooth ? S.day[c.key + '_s'] : S.day[c.key],
           t0: S.view.t0, t1: S.view.t1,
           log: S.log, selection: S.sel, saved, ref: null, hoverX: S.hoverX,
-          guide: (S.guides && c.guide)
+          guide: (guidesOn() && c.guide && S.day.guide)
             ? { v: S.day.guide[c.key], label: c.guide + '× median' } : null
         });
       }
       Render.axis(canvases.axis, S.view.t0, S.view.t1);
-    });
   }
 
   const nearest = sec => {
@@ -430,7 +441,7 @@
     $('jump').onchange = e => loadDay(+e.target.value);
     $('reset').onclick = () => { S.view = { t0: 0, t1: 86400 }; draw(); };
     $('logY').onchange = e => { S.log = e.target.checked; draw(); };
-    $('guides').onchange = e => { S.guides = e.target.checked; draw(); };
+    $('guides').onchange = () => draw();
 
     $('save').onclick = () => commit(S.sel.start, S.sel.end, 'click');
     $('clear').onclick = () => {
@@ -531,7 +542,7 @@
 
     // test hook: lets the workflow be driven headlessly, where a real pointer and
     // screenshots are not available
-    window.__saa = { S, draw, click, commit, loadDay, refresh, renderSel };
+    window.__saa = { S, draw, paint, click, commit, loadDay, refresh, renderSel };
 
     loadIndex().then(() => loadDay(0, true)).then(refresh);
   }
