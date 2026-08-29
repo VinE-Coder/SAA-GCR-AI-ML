@@ -493,6 +493,29 @@
       if (S.sel.start != null && S.sel.end != null) { e.preventDefault(); e.returnValue = ''; }
     });
 
+    /* GitHub Pages caches index.html for 10 minutes and it cannot carry a version
+     * stamp of its own, so a volunteer can be looking at stale instructions -- or,
+     * with the tab left open, at a build from hours ago. build.js records the id
+     * this document was built with; build.json records what is deployed now. If
+     * they differ, offer a reload. Cache-busted and no-store so neither the browser
+     * nor the CDN can answer from cache. */
+    async function checkBuild() {
+      if (!window.SAA_BUILD) return;
+      try {
+        const r = await fetch('build.json?t=' + Date.now(), { cache: 'no-store' });
+        if (!r.ok) return;
+        const live = (await r.json()).build;
+        if (live && live !== window.SAA_BUILD) {
+          const el = $('stale');
+          el.textContent = 'Newer version available — click to reload';
+          el.classList.remove('hidden');
+          el.onclick = () => location.reload();
+        }
+      } catch (e) { /* offline or blocked: leave the page alone */ }
+    }
+    checkBuild();
+    setInterval(checkBuild, 5 * 60 * 1000);
+
     $('storeState').textContent = Store.isLocal
       ? '⚠ ' + Store.backend.warning
       : 'Saving to the shared database.';

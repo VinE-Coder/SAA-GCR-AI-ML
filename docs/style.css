@@ -64,3 +64,7 @@ footer{position:fixed;bottom:0;left:0;right:0;padding:8px 20px;background:var(--
 footer .warn{color:#ffcf7a}
 
 .guideref{color:#9a8cff;font-weight:600}
+
+#stale{display:inline-block;margin-left:14px;color:#08111d;background:#ffcf7a;
+  padding:1px 10px;border-radius:11px;font-weight:600;cursor:pointer}
+#stale.hidden{display:none}
