@@ -520,6 +520,14 @@
       ? '⚠ ' + Store.backend.warning
       : 'Saving to the shared database.';
     $('storeState').className = Store.isLocal ? 'warn' : 'muted';
+    // shown so "is my page up to date?" can be answered by reading one string
+    if (window.SAA_BUILD) {
+      const b = document.createElement('span');
+      b.className = 'muted';
+      b.style.marginLeft = '14px';
+      b.textContent = 'build ' + window.SAA_BUILD.slice(0, 6);
+      $('storeState').parentElement.append(b);
+    }
 
     // test hook: lets the workflow be driven headlessly, where a real pointer and
     // screenshots are not available
